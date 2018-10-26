@@ -1,6 +1,6 @@
 # Pandas Cookbook 带注释源码
 
-![](cover.jpg)
+![](cover.png)
 
 > 贡献者：[SeanCheney](https://github.com/iamseancheney)
 > 
