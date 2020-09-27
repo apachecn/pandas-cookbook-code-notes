@@ -16,3 +16,14 @@
 + [EPUB格式](https://www.gitbook.com/download/epub/book/wizardforcel/pandas-cookbook-code-notes)
 + [MOBI格式](https://www.gitbook.com/download/mobi/book/wizardforcel/pandas-cookbook-code-notes)
 + [代码仓库](https://github.com/apachecn/pandas-cookbook-code-notes)
+
+
+## 下载
+
+### NPM
+
+```
+npm install -g pandas-cookbook-code-notes
+pandas-cookbook-code-notes <port>
+# 访问 http://localhost:{port} 查看文档
+```
