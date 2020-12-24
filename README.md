@@ -12,6 +12,7 @@
 &zwj;
 
 + [在线阅读](https://pdcb.apachecn.org)
++ [在线阅读（Gitee）](https://apachecn.gitee.io/pandas-cookbook-code-notes/)
 + [PDF格式](https://www.gitbook.com/download/pdf/book/wizardforcel/pandas-cookbook-code-notes)
 + [EPUB格式](https://www.gitbook.com/download/epub/book/wizardforcel/pandas-cookbook-code-notes)
 + [MOBI格式](https://www.gitbook.com/download/mobi/book/wizardforcel/pandas-cookbook-code-notes)
