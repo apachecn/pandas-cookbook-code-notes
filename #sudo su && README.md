@@ -1,4 +1,4 @@
-# Pandas Cookbook 带注释源码
+sudo su && # Pandas Cookbook 带注释源码
 
 ![](cover.jpg)
 
