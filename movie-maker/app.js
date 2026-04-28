@@ -24,7 +24,15 @@
   const btnPlay = $("btn-play");
   const btnNext = $("btn-next");
   const btnRestart = $("btn-restart");
+  const btnSave = $("btn-save");
+  const btnDownload = $("btn-download");
   const btnEdit = $("btn-edit");
+  const fadeOverlay = $("fade-overlay");
+  const savedMoviesPanel = $("saved-movies");
+  const savedListEl = $("saved-list");
+
+  const STORAGE_KEY = "movie-maker:saved";
+  const SAVED_LIMIT = 12;
 
   // Player state
   let movie = null;
@@ -82,6 +90,7 @@
     window.MovieAudio.cancelSpeech();
     setupPanel.hidden = false;
     theaterPanel.hidden = true;
+    refreshSavedPanel();
   });
 
   btnPlay.addEventListener("click", () => {
@@ -106,6 +115,17 @@
     dialogueIndex = -1;
     cancelTimers();
     startMovie();
+  });
+
+  btnSave.addEventListener("click", () => {
+    if (!movie) return;
+    saveMovie(movie);
+    flashMeta("Saved");
+  });
+
+  btnDownload.addEventListener("click", () => {
+    if (!movie) return;
+    downloadScript(movie);
   });
 
   // ---------- Movie playback ---------------------------------------
@@ -145,17 +165,34 @@
     if (!movie) return;
     const scene = movie.scenes[sceneIndex];
     if (!scene) return;
-    window.MovieAnimator.renderScene(scene, movie.palette, { speakerId: null });
-    sceneMeta.textContent = `Scene ${sceneIndex + 1} of ${movie.scenes.length} · ${scene.beat}`;
-    if (window.MovieAudio.isEnabled()) {
-      window.MovieAudio.playWhoosh();
-      window.MovieAudio.startLoop(movie.style, scene.mood);
+    fadeTransition(() => {
+      window.MovieAnimator.renderScene(scene, movie.palette, { speakerId: null });
+      sceneMeta.textContent = `Scene ${sceneIndex + 1} of ${movie.scenes.length} · ${scene.beat}`;
+      if (window.MovieAudio.isEnabled()) {
+        window.MovieAudio.playWhoosh();
+        window.MovieAudio.startLoop(movie.style, scene.mood);
+      }
+      if (scene.dialogue && scene.dialogue.length) {
+        dialogueIndex = -1;
+      }
+      showNarrationOverlay(scene.narration);
+    });
+  }
+
+  // Fade out, run a callback at the dark moment, then fade back in.
+  function fadeTransition(midpointCb) {
+    if (!fadeOverlay) {
+      midpointCb();
+      return;
     }
-    // Show the narration as the first dialogue line
-    if (scene.dialogue && scene.dialogue.length) {
-      dialogueIndex = -1; // will move to 0 when nextStep fires
-    }
-    showNarrationOverlay(scene.narration);
+    fadeOverlay.classList.add("active");
+    setTimeout(() => {
+      midpointCb();
+      // a frame to let the DOM update, then fade back in
+      requestAnimationFrame(() => {
+        fadeOverlay.classList.remove("active");
+      });
+    }, 460);
   }
 
   function showNarrationOverlay(text) {
@@ -316,6 +353,130 @@
     if (!s) return s;
     return s.charAt(0).toUpperCase() + s.slice(1);
   }
+
+  // ---------- Save / load via localStorage -------------------------
+  function readSaved() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return [];
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (_) {
+      return [];
+    }
+  }
+  function writeSaved(list) {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+  function saveMovie(m) {
+    const list = readSaved();
+    const entry = { id: "m_" + Date.now() + "_" + Math.random().toString(36).slice(2, 7), savedAt: Date.now(), movie: m };
+    list.unshift(entry);
+    while (list.length > SAVED_LIMIT) list.pop();
+    writeSaved(list);
+    refreshSavedPanel();
+  }
+  function deleteSaved(id) {
+    const list = readSaved().filter(e => e.id !== id);
+    writeSaved(list);
+    refreshSavedPanel();
+  }
+  function loadSaved(id) {
+    const entry = readSaved().find(e => e.id === id);
+    if (!entry) return;
+    movie = entry.movie;
+    setupPanel.hidden = true;
+    theaterPanel.hidden = false;
+    renderScript(movie);
+    window.MovieAudio.setEnabled(!!enableAudioEl.checked);
+    startMovie();
+  }
+  function refreshSavedPanel() {
+    const list = readSaved();
+    if (!list.length) {
+      savedMoviesPanel.hidden = true;
+      return;
+    }
+    savedMoviesPanel.hidden = false;
+    savedListEl.innerHTML = "";
+    list.forEach(entry => {
+      const wrap = document.createElement("span");
+      wrap.className = "saved-item";
+      const label = document.createElement("span");
+      label.textContent = entry.movie.title || "(untitled)";
+      const loadBtn = document.createElement("button");
+      loadBtn.type = "button";
+      loadBtn.className = "load-btn";
+      loadBtn.textContent = "Open";
+      loadBtn.addEventListener("click", () => loadSaved(entry.id));
+      const delBtn = document.createElement("button");
+      delBtn.type = "button";
+      delBtn.className = "delete-btn";
+      delBtn.textContent = "×";
+      delBtn.title = "Delete";
+      delBtn.addEventListener("click", () => deleteSaved(entry.id));
+      wrap.appendChild(label);
+      wrap.appendChild(loadBtn);
+      wrap.appendChild(delBtn);
+      savedListEl.appendChild(wrap);
+    });
+  }
+
+  // ---------- Download script as plain text ------------------------
+  function downloadScript(m) {
+    const lines = [];
+    lines.push(m.title);
+    if (m.subtitle) lines.push(m.subtitle);
+    lines.push("");
+    lines.push("Cast: " + [m.hero, m.villain, m.mentor].join(", "));
+    lines.push("Setting: " + m.setting);
+    lines.push("");
+    lines.push("=".repeat(60));
+    m.scenes.forEach((s, i) => {
+      lines.push("");
+      lines.push(`SCENE ${i + 1} — ${s.beat.toUpperCase()} (${s.mood})`);
+      lines.push("-".repeat(60));
+      lines.push(s.narration);
+      (s.dialogue || []).forEach(d => {
+        lines.push(`  ${d.speaker}: ${d.text}`);
+      });
+    });
+    const blob = new Blob([lines.join("\n")], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = sanitizeFilename(m.title) + ".txt";
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+      URL.revokeObjectURL(url);
+      a.remove();
+    }, 200);
+  }
+  function sanitizeFilename(s) {
+    return String(s || "movie")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 60) || "movie";
+  }
+
+  // Brief status message in the scene-meta corner.
+  function flashMeta(text) {
+    const prev = sceneMeta.textContent;
+    sceneMeta.textContent = text;
+    setTimeout(() => {
+      if (sceneMeta.textContent === text) sceneMeta.textContent = prev;
+    }, 1400);
+  }
+
+  // Refresh saved list on initial load and whenever returning to setup.
+  refreshSavedPanel();
 
   // ---------- Pause when tab hidden --------------------------------
   document.addEventListener("visibilitychange", () => {

@@ -237,6 +237,63 @@ button.primary:hover { filter: brightness(1.08); }
   text-transform: uppercase;
 }
 
+.fade-overlay {
+  position: absolute;
+  inset: 0;
+  background: #000;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.45s ease;
+}
+.fade-overlay.active { opacity: 1; }
+
+.saved-movies {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 4px;
+}
+.saved-label {
+  display: block;
+  font-size: 12px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 8px;
+}
+.saved-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.saved-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 13px;
+  color: var(--text);
+}
+.saved-item button {
+  padding: 2px 8px;
+  font-size: 12px;
+  border-radius: 6px;
+  background: transparent;
+  border: 1px solid var(--border);
+}
+.saved-item .load-btn {
+  color: var(--accent-2);
+  border-color: rgba(37, 208, 200, 0.4);
+}
+.saved-item .delete-btn {
+  color: var(--danger);
+  border-color: rgba(255, 92, 138, 0.4);
+}
+
 .controls {
   display: flex;
   gap: 8px;

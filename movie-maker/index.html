@@ -16,6 +16,10 @@
     <section id="setup-panel" class="panel">
       <h2>1. Describe your story</h2>
       <form id="setup-form">
+        <div id="saved-movies" class="saved-movies" hidden>
+          <span class="saved-label">Saved movies:</span>
+          <div id="saved-list" class="saved-list"></div>
+        </div>
         <label>
           <span>Story idea (any words, any language)</span>
           <textarea id="idea" rows="3" placeholder="A lonely robot finds a flower in the desert..."></textarea>
@@ -67,6 +71,7 @@
           <p id="title-sub"></p>
         </div>
         <div id="scene-meta" class="scene-meta"></div>
+        <div id="fade-overlay" class="fade-overlay"></div>
       </div>
 
       <div class="controls">
@@ -74,6 +79,8 @@
         <button id="btn-play" class="primary" title="Play / pause">&#x25b6;</button>
         <button id="btn-next" title="Next scene">&#x23ed;</button>
         <button id="btn-restart" title="Restart">&#x21bb;</button>
+        <button id="btn-save" title="Save to browser">Save</button>
+        <button id="btn-download" title="Download script as .txt">Download</button>
         <button id="btn-edit" title="Back to setup">New movie</button>
       </div>
 
