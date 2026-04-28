@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Procedural Movie Maker</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main id="app">
+    <header>
+      <h1>Procedural Movie Maker</h1>
+      <p class="tagline">Generate a tiny animated story. No API keys. No internet required.</p>
+    </header>
+
+    <section id="setup-panel" class="panel">
+      <h2>1. Describe your story</h2>
+      <form id="setup-form">
+        <div id="saved-movies" class="saved-movies" hidden>
+          <span class="saved-label">Saved movies:</span>
+          <div id="saved-list" class="saved-list"></div>
+        </div>
+        <label>
+          <span>Story idea (any words, any language)</span>
+          <textarea id="idea" rows="3" placeholder="A lonely robot finds a flower in the desert..."></textarea>
+        </label>
+
+        <label>
+          <span>Genre</span>
+          <select id="style">
+            <option value="anime">Anime / Adventure</option>
+            <option value="scifi">Sci-Fi</option>
+            <option value="fantasy">Fantasy</option>
+            <option value="horror">Horror</option>
+            <option value="comedy">Comedy</option>
+            <option value="mystery">Mystery</option>
+          </select>
+        </label>
+
+        <label>
+          <span>Number of scenes: <output id="scene-count-out">5</output></span>
+          <input type="range" id="scene-count" min="3" max="8" value="5" />
+        </label>
+
+        <label class="checkbox">
+          <input type="checkbox" id="enable-audio" checked />
+          <span>Enable procedural music + narration</span>
+        </label>
+
+        <div class="button-row">
+          <button type="submit" class="primary">Generate movie</button>
+          <button type="button" id="surprise-me">Surprise me</button>
+        </div>
+      </form>
+    </section>
+
+    <section id="theater-panel" class="panel" hidden>
+      <div id="stage-wrap">
+        <svg id="stage" viewBox="0 0 1280 720" preserveAspectRatio="xMidYMid slice" aria-label="Movie stage">
+          <defs id="stage-defs"></defs>
+          <g id="bg-layer"></g>
+          <g id="char-layer"></g>
+          <g id="fx-layer"></g>
+        </svg>
+        <div id="dialogue-box" class="dialogue-box">
+          <div id="dialogue-speaker" class="speaker"></div>
+          <div id="dialogue-text" class="text"></div>
+        </div>
+        <div id="title-card" class="title-card" hidden>
+          <h2 id="title-text"></h2>
+          <p id="title-sub"></p>
+        </div>
+        <div id="scene-meta" class="scene-meta"></div>
+        <div id="fade-overlay" class="fade-overlay"></div>
+      </div>
+
+      <div class="controls">
+        <button id="btn-prev" title="Previous scene">&#x23ee;</button>
+        <button id="btn-play" class="primary" title="Play / pause">&#x25b6;</button>
+        <button id="btn-next" title="Next scene">&#x23ed;</button>
+        <button id="btn-restart" title="Restart">&#x21bb;</button>
+        <button id="btn-save" title="Save to browser">Save</button>
+        <button id="btn-download" title="Download script as .txt">Download</button>
+        <button id="btn-edit" title="Back to setup">New movie</button>
+      </div>
+
+      <details id="script-details">
+        <summary>Show full script</summary>
+        <div id="script-output" class="script"></div>
+      </details>
+    </section>
+
+    <footer>
+      <p>
+        Open this file directly in any modern browser. All generation happens locally —
+        no servers, no API keys, no tracking.
+      </p>
+    </footer>
+  </main>
+
+  <script src="story.js"></script>
+  <script src="animator.js"></script>
+  <script src="audio.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
