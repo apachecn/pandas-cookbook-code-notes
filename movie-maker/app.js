@@ -210,11 +210,10 @@
     dialogueSpeaker.textContent = line.speaker;
     typeText(line.text, () => {});
     dialogueBox.classList.add("visible");
-    // Highlight the speaker on stage
     const scene = movie.scenes[sceneIndex];
     const speakerMember = (scene.cast || []).find(c => c.name === line.speaker);
     const speakerId = speakerMember ? speakerMember.id : null;
-    window.MovieAnimator.updateSpeaker(scene, movie.palette, speakerId);
+    window.MovieAnimator.updateSpeaker(scene, movie.palette, speakerId, line.mood || "calm");
 
     if (window.MovieAudio.isEnabled()) {
       window.MovieAudio.cancelSpeech();

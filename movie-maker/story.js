@@ -336,27 +336,27 @@
     const villainName = ctx.villain;
     const mentorName = ctx.mentor;
 
-    function take(pool, speaker) {
+    function take(pool, speaker, mood) {
       const line = fill(pick(pool, rng), ctx);
-      lines.push({ speaker, text: line });
+      lines.push({ speaker, text: line, mood });
     }
 
     if (beat === "opening") {
-      take(dialog.narration_open, "Narrator");
-      if (beatIndex === 0 && rng() < 0.6) take(dialog.hero_doubt, heroName);
+      take(dialog.narration_open, "Narrator", "calm");
+      if (beatIndex === 0 && rng() < 0.6) take(dialog.hero_doubt, heroName, "doubt");
     } else if (beat === "inciting") {
-      take(dialog.hero_doubt, heroName);
-      if (rng() < 0.5) take(dialog.villain_taunt, villainName);
+      take(dialog.hero_doubt, heroName, "doubt");
+      if (rng() < 0.5) take(dialog.villain_taunt, villainName, "taunt");
     } else if (beat === "rising") {
-      if (rng() < 0.6) take(dialog.mentor_wise, mentorName);
-      take(dialog.hero_resolve, heroName);
+      if (rng() < 0.6) take(dialog.mentor_wise, mentorName, "wise");
+      take(dialog.hero_resolve, heroName, "resolve");
     } else if (beat === "climax") {
-      take(dialog.villain_taunt, villainName);
-      take(dialog.hero_brave, heroName);
-      if (rng() < 0.7) take(dialog.villain_rage, villainName);
+      take(dialog.villain_taunt, villainName, "taunt");
+      take(dialog.hero_brave, heroName, "brave");
+      if (rng() < 0.7) take(dialog.villain_rage, villainName, "rage");
     } else if (beat === "resolution") {
-      take(dialog.narration_close, "Narrator");
-      if (rng() < 0.5) take(dialog.hero_resolve, heroName);
+      take(dialog.narration_close, "Narrator", "calm");
+      if (rng() < 0.5) take(dialog.hero_resolve, heroName, "resolve");
     }
     return lines;
   }
@@ -386,17 +386,40 @@
       mystery: ["The Case of %s", "%s and the Quiet Room", "Last Train to %s", "Inspector %s", "The %s Affair"]
     };
     const subjectFromIdea = (() => {
-      const words = ideaTrim
+      // Score candidate words: longer, non-stop, noun-shaped wins.
+      const candidates = ideaTrim
         .split(/\s+/)
-        .filter(w => /^[\p{L}\p{N}'-]{4,}$/u.test(w) && !STOP.has(w.toLowerCase()));
-      if (words.length) return words[Math.floor(rng() * words.length)];
-      return ctx.hero;
+        .map(w => w.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, ""))
+        .filter(w => /^[\p{L}\p{N}'-]+$/u.test(w))
+        .filter(w => w.length >= 5)
+        .filter(w => !STOP.has(w.toLowerCase()))
+        .filter(w => !VERBY.test(w))
+        .filter(w => !COMMON_VERBS_S.has(w.toLowerCase()));
+      if (!candidates.length) return ctx.hero;
+      // Bias toward longer words — sort by length desc, take top half, pick at random.
+      candidates.sort((a, b) => b.length - a.length);
+      const top = candidates.slice(0, Math.max(1, Math.ceil(candidates.length / 2)));
+      return top[Math.floor(rng() * top.length)];
     })();
     const tmpl = pick(TITLES[style] || TITLES.anime, rng);
     const title = tmpl.replace("%s", capitalize(subjectFromIdea));
     const subtitle = ideaTrim ? truncate(ideaTrim, 90) : "An original short.";
     return { title, subtitle };
   }
+
+  // Words that look like inflected verbs — exclude them from titles because
+  // "The Last Running" / "Signal from Looked" read poorly. We deliberately allow
+  // bare -s words: they're more often plural nouns than verbs in casual prompts.
+  const VERBY = /(ing|ed)$/i;
+  // Common English verbs whose -s form is much more often a verb than a noun.
+  // Caught via "finds", "wants", "needs", "looks", etc.
+  const COMMON_VERBS_S = new Set([
+    "finds","wants","needs","looks","makes","takes","gives","goes","does","says","tells",
+    "sees","hears","feels","knows","thinks","believes","hopes","tries","keeps","seems",
+    "comes","leaves","stays","walks","runs","stops","starts","helps","works","plays",
+    "lives","dies","loves","hates","calls","asks","brings","gets","puts","sends","reads",
+    "writes","sleeps","wakes","eats","drinks","carries","wonders","watches","becomes"
+  ]);
 
   function capitalize(s) {
     if (!s) return s;
@@ -409,7 +432,16 @@
   const STOP = new Set([
     "the","and","with","that","this","from","into","when","then","what","they","them","were","have",
     "your","yours","their","there","about","just","like","because","while","over","very","really",
-    "would","could","should","still","such","make","made","also","some","more","much","many","most"
+    "would","could","should","still","such","make","made","also","some","more","much","many","most",
+    "itself","himself","herself","themselves","yourself","ourselves",
+    "against","between","through","throughout","during","across","before","after","behind","beyond",
+    "without","within","under","above","around","beside","along","among","upon","unless","whose",
+    "where","whether","being","having","every","another",
+    "someone","everyone","anyone","nobody","everybody","something","anything","nothing","everything",
+    // Common adjectives — they read awkwardly when slotted into title templates.
+    "small","large","lonely","tired","young","quiet","loud","strange","weird","scared","afraid",
+    "brave","kind","mean","hungry","tasty","sweet","bitter","light","heavy","clean","dirty",
+    "haunted","cursed","blessed","ancient","modern","future","past","early","later"
   ]);
 
   // ----- Public API ------------------------------------------------

@@ -126,7 +126,98 @@
     return `hsl(${hue}, ${sat}%, ${light}%)`;
   }
 
-  function buildCharacter(member, x, y, scale, isSpeaking) {
+  // Render a face matching the speaker's mood. Eyes, brows, mouth all change.
+  // Brows alone do most of the emotional lifting.
+  function drawFace(g, role, mood, isSpeaking, characterRole) {
+    const eyeY = 0;
+    const eyeR = 5;
+    const mouthY = 22;
+    const browY = -14;
+
+    // ---- Eyes ----
+    // Squint for rage / brave / taunt; wide for doubt / wise; default neutral.
+    let eyeOpenY = 7;     // half-height of the white eye
+    if (mood === "rage" || mood === "brave") eyeOpenY = 4;
+    else if (mood === "doubt" || mood === "wise") eyeOpenY = 8;
+
+    g.appendChild(el("ellipse", { cx: -16, cy: eyeY, rx: eyeR + 2, ry: eyeOpenY, fill: "#fff" }));
+    g.appendChild(el("ellipse", { cx:  16, cy: eyeY, rx: eyeR + 2, ry: eyeOpenY, fill: "#fff" }));
+
+    // Pupils — slightly off-center for taunt (looking away/down) and doubt (looking up).
+    let pupilDx = 0, pupilDy = 0;
+    if (mood === "taunt")  { pupilDx = -2; pupilDy = 1; }
+    if (mood === "doubt")  { pupilDx = 0;  pupilDy = -2; }
+    if (mood === "rage")   { pupilDx = 0;  pupilDy = 1; }
+    g.appendChild(el("circle", { cx: -16 + pupilDx, cy: eyeY + pupilDy, r: eyeR, fill: role.eyeColor }));
+    g.appendChild(el("circle", { cx:  16 + pupilDx, cy: eyeY + pupilDy, r: eyeR, fill: role.eyeColor }));
+
+    // ---- Eyebrows ----
+    // Brows take 5 forms: angry-down (rage/brave), worried-up (doubt), flat
+    // (calm/wise), arched (taunt), determined-flat-strong (resolve).
+    const browStroke = "#3a1818";
+    const browW = 3.5;
+
+    function brow(d) {
+      g.appendChild(el("path", {
+        d, stroke: browStroke, "stroke-width": browW, fill: "none", "stroke-linecap": "round"
+      }));
+    }
+
+    if (mood === "rage" || mood === "brave" || (characterRole === "antagonist" && mood !== "doubt")) {
+      // Angry — inner ends down, outer up.
+      brow("M -26,-20 L -8,-13");
+      brow("M  8,-13 L  26,-20");
+    } else if (mood === "doubt") {
+      // Worried — inner ends up, like ramps.
+      brow("M -26,-12 L -8,-18");
+      brow("M  8,-18 L  26,-12");
+    } else if (mood === "taunt") {
+      // Smug — one brow raised.
+      brow("M -26,-13 L -8,-13");
+      brow("M  8,-19 L  26,-13");
+    } else if (mood === "resolve") {
+      // Set, level brows, slightly thicker stroke implied by length.
+      brow("M -27,-15 L -7,-15");
+      brow("M  7,-15 L  27,-15");
+    } else {
+      // Calm / wise — soft arched brows.
+      brow("M -26,-14 Q -17,-17 -8,-14");
+      brow("M  8,-14 Q 17,-17 26,-14");
+    }
+
+    // ---- Mouth ----
+    // Speaking overrides shape with an animated open ellipse.
+    if (isSpeaking) {
+      const mouth = el("ellipse", { cx: 0, cy: mouthY, rx: 10, ry: 6, fill: "#3a1818" });
+      mouth.appendChild(el("animate", {
+        attributeName: "ry", values: "6;2;6", dur: "0.5s", repeatCount: "indefinite"
+      }));
+      g.appendChild(mouth);
+    } else if (mood === "rage") {
+      // Bared-teeth open mouth.
+      g.appendChild(el("rect", { x: -14, y: 18, width: 28, height: 12, rx: 3, fill: "#3a1818" }));
+      g.appendChild(el("path", { d: "M -10,18 L -10,30 M -2,18 L -2,30 M 6,18 L 6,30", stroke: "#fff", "stroke-width": 2 }));
+    } else if (mood === "brave" || mood === "resolve") {
+      // Firm flat line.
+      g.appendChild(el("path", { d: "M -12,23 L 12,23", stroke: "#3a1818", "stroke-width": 3, "stroke-linecap": "round" }));
+    } else if (mood === "doubt") {
+      // Frown (curve down).
+      g.appendChild(el("path", { d: "M -12,26 Q 0,20 12,26", stroke: "#3a1818", "stroke-width": 3, fill: "none", "stroke-linecap": "round" }));
+    } else if (mood === "taunt") {
+      // Smirk — diagonal curve.
+      g.appendChild(el("path", { d: "M -12,24 Q 0,18 14,22", stroke: "#3a1818", "stroke-width": 3, fill: "none", "stroke-linecap": "round" }));
+    } else if (mood === "wise") {
+      // Soft Mona-Lisa half-smile.
+      g.appendChild(el("path", { d: "M -10,22 Q 0,26 10,22", stroke: "#3a1818", "stroke-width": 3, fill: "none", "stroke-linecap": "round" }));
+    } else if (characterRole === "antagonist") {
+      g.appendChild(el("path", { d: "M -14,24 Q 0,18 14,24", stroke: "#3a1818", "stroke-width": 3, fill: "none", "stroke-linecap": "round" }));
+    } else {
+      g.appendChild(el("path", { d: "M -12,22 Q 0,30 12,22", stroke: "#3a1818", "stroke-width": 3, fill: "none", "stroke-linecap": "round" }));
+    }
+  }
+
+  function buildCharacter(member, x, y, scale, isSpeaking, mood) {
+    mood = mood || "calm";
     const g = el("g", {
       class: "character",
       transform: `translate(${x},${y}) scale(${scale})`,
@@ -161,7 +252,6 @@
 
     // Hair
     if (member.role === "mentor") {
-      // hood-like halo
       g.appendChild(el("path", {
         d: "M -55,-5 Q -55,-65 0,-65 Q 55,-65 55,-5 L 55,15 L -55,15 Z",
         fill: role.hair
@@ -178,26 +268,8 @@
       }));
     }
 
-    // Eyes
-    const eyeY = 0;
-    const eyeR = 5;
-    g.appendChild(el("circle", { cx: -16, cy: eyeY, r: eyeR + 2, fill: "#fff" }));
-    g.appendChild(el("circle", { cx:  16, cy: eyeY, r: eyeR + 2, fill: "#fff" }));
-    g.appendChild(el("circle", { cx: -16, cy: eyeY, r: eyeR, fill: role.eyeColor }));
-    g.appendChild(el("circle", { cx:  16, cy: eyeY, r: eyeR, fill: role.eyeColor }));
-
-    // Mouth — different shape per role + speaking
-    const mouthY = 22;
-    if (isSpeaking) {
-      const mouth = el("ellipse", { cx: 0, cy: mouthY, rx: 10, ry: 6, fill: "#3a1818" });
-      const animR = el("animate", { attributeName: "ry", values: "6;2;6", dur: "0.5s", repeatCount: "indefinite" });
-      mouth.appendChild(animR);
-      g.appendChild(mouth);
-    } else if (member.role === "antagonist") {
-      g.appendChild(el("path", { d: "M -14,24 Q 0,18 14,24", stroke: "#3a1818", "stroke-width": 3, fill: "none", "stroke-linecap": "round" }));
-    } else {
-      g.appendChild(el("path", { d: "M -12,22 Q 0,30 12,22", stroke: "#3a1818", "stroke-width": 3, fill: "none", "stroke-linecap": "round" }));
-    }
+    // Mood-driven facial expression (eyes, brows, mouth)
+    drawFace(g, role, mood, isSpeaking, member.role);
 
     // Idle bob animation via SMIL
     const bob = el("animateTransform", {
@@ -248,7 +320,9 @@
   function renderScene(scene, palette, options) {
     options = options || {};
     const speakerId = options.speakerId || null;
+    const speakerMood = options.speakerMood || "calm";
 
+    const stage = document.getElementById("stage");
     const bgLayer = document.getElementById("bg-layer");
     const charLayer = document.getElementById("char-layer");
     const fxLayer = document.getElementById("fx-layer");
@@ -260,12 +334,15 @@
     bgLayer.appendChild(buildBackground(palette, scene.mood));
 
     const positions = placeCast(scene.cast);
+    let speakerPos = null;
+
     scene.cast.forEach((member, i) => {
       const pos = positions[i];
       const isSpeaking = member.id === speakerId;
-      const node = buildCharacter(member, pos.x, pos.y, pos.scale, isSpeaking);
+      const moodForChar = isSpeaking ? speakerMood : passiveMood(member.role, scene.mood);
+      const node = buildCharacter(member, pos.x, pos.y, pos.scale, isSpeaking, moodForChar);
       if (isSpeaking) {
-        // gentle highlight ring under the speaker
+        speakerPos = pos;
         const ring = el("ellipse", {
           cx: pos.x, cy: pos.y + 230, rx: 110, ry: 22,
           fill: "none",
@@ -273,13 +350,12 @@
           "stroke-width": 3,
           opacity: 0.65
         });
-        const pulse = el("animate", {
+        ring.appendChild(el("animate", {
           attributeName: "opacity",
           values: "0.25;0.85;0.25",
           dur: "1.6s",
           repeatCount: "indefinite"
-        });
-        ring.appendChild(pulse);
+        }));
         fxLayer.appendChild(ring);
       }
       charLayer.appendChild(node);
@@ -293,11 +369,61 @@
       document.getElementById("stage-defs").appendChild(vignette);
       fxLayer.appendChild(el("rect", { x: 0, y: 0, width: W, height: H, fill: "url(#vignette)", "pointer-events": "none" }));
     }
+
+    // Camera framing — slight zoom-in on the speaker via viewBox.
+    applyCamera(stage, speakerPos);
   }
 
-  // Update only the speaker highlight without re-rendering the whole scene.
-  function updateSpeaker(scene, palette, speakerId) {
-    renderScene(scene, palette, { speakerId });
+  // Pick a "passive" mood for non-speaking characters so the villain doesn't
+  // suddenly look calm during a tense scene.
+  function passiveMood(charRole, sceneMood) {
+    if (charRole === "antagonist") return sceneMood === "calm" ? "calm" : "taunt";
+    if (charRole === "mentor") return "wise";
+    if (sceneMood === "intense" || sceneMood === "tense") return "doubt";
+    return "calm";
+  }
+
+  // Smoothly tweak the SVG viewBox so the speaker is centered + a little larger.
+  // Done in JS rather than CSS because viewBox isn't an animatable CSS property.
+  let cameraTimer = null;
+  let currentVB = { x: 0, y: 0, w: W, h: H };
+  function applyCamera(stage, speakerPos) {
+    let target;
+    if (speakerPos) {
+      const zoom = 0.78;            // 22% closer
+      const w = W * zoom;
+      const h = H * zoom;
+      const x = clamp(speakerPos.x - w / 2, 0, W - w);
+      const y = clamp(speakerPos.y - h / 2 - 30, 0, H - h);
+      target = { x, y, w, h };
+    } else {
+      target = { x: 0, y: 0, w: W, h: H };
+    }
+    animateViewBox(stage, currentVB, target, 600);
+    currentVB = target;
+  }
+  function animateViewBox(stage, from, to, durationMs) {
+    if (cameraTimer) { cancelAnimationFrame(cameraTimer); cameraTimer = null; }
+    const start = performance.now();
+    function step(now) {
+      const t = Math.min(1, (now - start) / durationMs);
+      const e = easeOutCubic(t);
+      const x = from.x + (to.x - from.x) * e;
+      const y = from.y + (to.y - from.y) * e;
+      const w = from.w + (to.w - from.w) * e;
+      const h = from.h + (to.h - from.h) * e;
+      stage.setAttribute("viewBox", `${x} ${y} ${w} ${h}`);
+      if (t < 1) cameraTimer = requestAnimationFrame(step);
+      else cameraTimer = null;
+    }
+    cameraTimer = requestAnimationFrame(step);
+  }
+  function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
+  function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+
+  // Update only the speaker highlight + face mood without re-rendering the whole scene.
+  function updateSpeaker(scene, palette, speakerId, speakerMood) {
+    renderScene(scene, palette, { speakerId, speakerMood });
   }
 
   // Title-card entry / exit.
